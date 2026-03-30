@@ -1,0 +1,45 @@
+name: Post AI News
+
+on:
+  workflow_dispatch:
+  schedule:
+    - cron: "0 */12 * * *"
+
+jobs:
+  post:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Go
+        uses: actions/setup-go@v5
+        with:
+          go-version: "1.22"
+
+      - name: Post new AI News items
+        env:
+          SLACK_BOT_TOKEN: ${{ secrets.SLACK_BOT_TOKEN }}
+          SLACK_CHANNEL_ID: ${{ secrets.SLACK_CHANNEL_ID }}
+          LATENT_SPACE_AINEWS_URL: ${{ vars.LATENT_SPACE_AINEWS_URL || 'https://www.latent.space/s/ainews' }}
+          STATE_FILE: ./data/state.json
+          MAX_POSTS_PER_RUN: ${{ vars.MAX_POSTS_PER_RUN || '1' }}
+        run: go run ./cmd/ai-news-slack
+
+      - name: Commit updated state
+        run: |
+          mkdir -p data
+          if [ ! -f data/state.json ]; then
+            exit 0
+          fi
+          if git diff --quiet -- data/state.json; then
+            exit 0
+          fi
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add data/state.json
+          git commit -m "chore: update AI News bot state"
+          git push

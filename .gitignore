@@ -1,0 +1,6 @@
+.env
+.cache/
+bin/
+data/*.json
+!data/.gitkeep
+!data/state.json
